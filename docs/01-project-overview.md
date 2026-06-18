@@ -11,3 +11,4 @@ The project is architected as a decoupled full-stack application:
 - **Frontend:** React.js (Vite) for responsive client interaction.
 - **Backend:** FastAPI (Python) for orchestration and PDF parsing.
 - **AI Engine:** DeepSeek API for LLM-powered structural evaluation and JSON data extraction.
+
