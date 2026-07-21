@@ -1,61 +1,82 @@
 import React, { useState } from 'react';
 
-export default function App() {
-  // States hold information that can change on the screen
+function App() {
   const [file, setFile] = useState(null);
+  const [extractedText, setExtractedText] = useState('');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState("");
+  const [error, setError] = useState('');
 
-  // This runs when the user selects a file from their computer
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
+    setError('');
   };
 
-  // This runs when the user clicks the "Upload & Analyze" button
-  const handleUpload = async () => {
-    if (!file) return alert("Please select a file first!");
+  const handleAnalyze = async () => {
+    if (!file) {
+      setError('Please select a PDF file first!');
+      return;
+    }
 
-    setLoading(true); // Start a loading indicator
+    setLoading(true);
+    setError('');
+    setExtractedText('');
 
-    // Prepare the file data to be sent across the internet
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append('file', file);
+
+    // Dynamic backend URL based on current Codespaces host name
+    const backendUrl = window.location.origin.replace('-5173', '-8000') + '/api/upload-resume';
 
     try {
-      // Connect directly to the Backend route we made in Phase 1
-      const response = await fetch("/api/upload-resume", {
-        method: "POST",
+      const response = await fetch(backendUrl, {
+        method: 'POST',
         body: formData,
       });
-      
+
+      if (!response.ok) {
+        throw new Error(`Server returned error status: ${response.status}`);
+      }
+
       const data = await response.json();
-      setResult(data.extracted_text); // Save the extracted text to show on screen
-    } catch (error) {
-      console.error("Error uploading file:", error);
+      setExtractedText(data.extracted_text || 'No text could be extracted.');
+    } catch (err) {
+      console.error("Fetch Error:", err);
+      setError('Failed to fetch from backend. Check browser console for details.');
     } finally {
-      setLoading(false); // Stop the loading indicator
+      setLoading(false);
     }
   };
 
   return (
-    <div style={{ padding: '40px', fontFamily: 'sans-serif' }}>
-      <h1>AI Resume Analyzer</h1>
-      
-      {/* 1. The file picker input */}
-      <input type="file" accept=".pdf" onChange={handleFileChange} />
-      
-      {/* 2. The submit button */}
-      <button onClick={handleUpload} style={{ marginLeft: '10px', padding: '5px 10px' }}>
-        {loading ? "Analyzing..." : "Upload & Analyze"}
-      </button>
+    <div style={{ maxWidth: '800px', margin: '40px auto', fontFamily: 'sans-serif', padding: '20px' }}>
+      <h1>📄 AI Resume Analyzer</h1>
 
-      <hr style={{ margin: '30px 0' }} />
-
-      {/* 3. The display dashboard showing our results */}
-      <h3>Extracted Text Result:</h3>
-      <div style={{ background: '#f5f5f5', padding: '20px', borderRadius: '5px', whiteSpace: 'pre-wrap' }}>
-        {result ? result : "Your extracted resume content will show up here."}
+      <div style={{ margin: '20px 0', padding: '20px', border: '1px dashed #ccc', borderRadius: '8px' }}>
+        <input type="file" accept=".pdf" onChange={handleFileChange} />
+        <button 
+          onClick={handleAnalyze} 
+          disabled={loading}
+          style={{ marginLeft: '10px', padding: '8px 16px', cursor: 'pointer' }}
+        >
+          {loading ? 'Analyzing...' : 'Analyze Resume'}
+        </button>
       </div>
+
+      {error && <p style={{ color: 'red', fontWeight: 'bold' }}>{error}</p>}
+
+      {extractedText && (
+        <div style={{ marginTop: '20px', textAlign: 'left' }}>
+          <h3>Extracted Content:</h3>
+          <textarea
+            readOnly
+            value={extractedText}
+            rows={15}
+            style={{ width: '100%', padding: '10px', fontFamily: 'monospace' }}
+          />
+        </div>
+      )}
     </div>
   );
 }
+
+export default App;
