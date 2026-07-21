@@ -1,10 +1,20 @@
 from fastapi import FastAPI, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
 import pdfplumber
 
-# 1. Initialize your FastAPI app (the server framework)
+# 1. Initialize your FastAPI app
 app = FastAPI()
 
-# 2. Create the URL route where the frontend will send the file
+# 2. Add CORS Middleware (This unlocks the backend for your frontend)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows requests from any origin/port (including Codespaces)
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows POST, GET, OPTIONS, etc.
+    allow_headers=["*"],
+)
+
+# 3. Create the URL route where the frontend will send the file
 @app.post("/api/upload-resume")
 async def upload_resume(file: UploadFile = File(...)):
     # Open the uploaded PDF file safely
@@ -18,4 +28,3 @@ async def upload_resume(file: UploadFile = File(...)):
     
     # Send the raw text back to whoever requested it
     return {"filename": file.filename, "extracted_text": text}
-    
