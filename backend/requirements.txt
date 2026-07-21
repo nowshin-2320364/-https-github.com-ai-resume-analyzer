@@ -1,5 +1,8 @@
 fastapi
 uvicorn
-openai
+google-genai
+python-dotenv
+pdfplumber
+python-multipart
 pydantic
-pdfplumber  
+requests
