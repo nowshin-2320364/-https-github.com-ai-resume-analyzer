@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-function App() {
+export default function App() {
   const [file, setFile] = useState(null);
   const [jobDescription, setJobDescription] = useState('');
   const [extractedText, setExtractedText] = useState('');
@@ -9,13 +9,16 @@ function App() {
   const [error, setError] = useState('');
 
   const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
-    setError('');
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+      setError('');
+    }
   };
 
-  const handleAnalyze = async () => {
+  const handleAnalyze = async (e) => {
+    e.preventDefault();
     if (!file) {
-      setError('Please select a PDF resume file first.');
+      setError('Please upload a PDF resume first.');
       return;
     }
 
@@ -28,110 +31,318 @@ function App() {
     formData.append('file', file);
     formData.append('job_description', jobDescription);
 
-    // Dynamically routes port 5173 -> port 8000 in GitHub Codespaces environment
-    const backendUrl = window.location.origin.replace('-5173', '-8000') + '/api/upload-resume';
-
     try {
-      const response = await fetch(backendUrl, {
+      const currentUrl = window.location.href;
+      let backendUrl = 'http://localhost:8000/api/upload-resume';
+
+      if (currentUrl.includes('.app.github.dev')) {
+        backendUrl = currentUrl.replace('-5173.', '-8000.').replace(/\/$/, '') + '/api/upload-resume';
+      }
+
+      const res = await fetch(backendUrl, {
         method: 'POST',
         body: formData,
       });
 
-      if (!response.ok) {
-        throw new Error(`Server response error: ${response.status}`);
-      }
+      if (!res.ok) throw new Error(`Server returned status ${res.status}`);
 
-      const data = await response.json();
-      setExtractedText(data.extracted_text || '');
-      setAnalysis(data.analysis || null);
+      const data = await res.json();
+
+      if (data.error) {
+        setError(data.error);
+      } else {
+        setExtractedText(data.extracted_text || '');
+        setAnalysis(data.analysis || null);
+      }
     } catch (err) {
       console.error(err);
-      setError('Failed to reach backend API. Ensure Port 8000 is active and set to Public.');
+      setError('Failed to connect to backend server. Ensure FastAPI is running on port 8000.');
     } finally {
       setLoading(false);
     }
   };
 
+  // --- Pure React Inline Styles ---
+  const styles = {
+    container: {
+      minHeight: '100vh',
+      backgroundColor: '#0f172a',
+      color: '#f8fafc',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      padding: '40px 20px',
+    },
+    wrapper: {
+      maxWidth: '900px',
+      margin: '0 auto',
+    },
+    header: {
+      textAlign: 'center',
+      marginBottom: '40px',
+    },
+    title: {
+      fontSize: '2.5rem',
+      fontWeight: '800',
+      margin: '0 0 10px 0',
+      background: 'linear-gradient(to right, #818cf8, #c084fc)',
+      WebkitBackgroundClip: 'text',
+      WebkitTextFillColor: 'transparent',
+    },
+    subtitle: {
+      color: '#94a3b8',
+      fontSize: '1.1rem',
+      margin: 0,
+    },
+    card: {
+      backgroundColor: '#1e293b',
+      border: '1px solid #334155',
+      borderRadius: '12px',
+      padding: '30px',
+      marginBottom: '30px',
+      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
+    },
+    formGroup: {
+      marginBottom: '20px',
+    },
+    label: {
+      display: 'block',
+      fontWeight: '600',
+      marginBottom: '8px',
+      color: '#cbd5e1',
+    },
+    fileInputWrapper: {
+      border: '2px dashed #475569',
+      borderRadius: '8px',
+      padding: '30px',
+      textAlign: 'center',
+      cursor: 'pointer',
+      backgroundColor: '#0f172a',
+      position: 'relative',
+      transition: 'border-color 0.3s',
+    },
+    fileInput: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      opacity: 0,
+      cursor: 'pointer',
+    },
+    textarea: {
+      width: '100%',
+      minHeight: '120px',
+      backgroundColor: '#0f172a',
+      border: '1px solid #475569',
+      borderRadius: '8px',
+      padding: '12px',
+      color: '#f8fafc',
+      resize: 'vertical',
+      boxSizing: 'border-box',
+    },
+    button: {
+      width: '100%',
+      padding: '14px',
+      backgroundColor: '#6366f1',
+      color: 'white',
+      border: 'none',
+      borderRadius: '8px',
+      fontSize: '1rem',
+      fontWeight: 'bold',
+      cursor: 'pointer',
+      transition: 'background-color 0.2s',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: '10px',
+    },
+    buttonDisabled: {
+      backgroundColor: '#475569',
+      cursor: 'not-allowed',
+    },
+    error: {
+      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+      border: '1px solid #ef4444',
+      color: '#fca5a5',
+      padding: '12px',
+      borderRadius: '8px',
+      marginBottom: '20px',
+    },
+    grid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+      gap: '20px',
+      marginBottom: '20px',
+    },
+    scoreCard: {
+      textAlign: 'center',
+      padding: '20px',
+      backgroundColor: '#0f172a',
+      borderRadius: '8px',
+      border: '1px solid #334155',
+    },
+    scoreValue: {
+      fontSize: '3rem',
+      fontWeight: '900',
+      margin: '10px 0',
+    },
+    list: {
+      listStyleType: 'none',
+      padding: 0,
+      margin: 0,
+    },
+    listItem: {
+      padding: '8px 0',
+      borderBottom: '1px solid #334155',
+      color: '#cbd5e1',
+      fontSize: '0.95rem',
+      display: 'flex',
+      gap: '8px',
+    },
+    badge: {
+      display: 'inline-block',
+      padding: '4px 10px',
+      borderRadius: '20px',
+      fontSize: '0.85rem',
+      margin: '4px',
+      backgroundColor: 'rgba(245, 158, 11, 0.1)',
+      color: '#fcd34d',
+      border: '1px solid rgba(245, 158, 11, 0.3)',
+    }
+  };
+
+  const getScoreColor = (score) => {
+    if (score >= 80) return '#34d399'; // Green
+    if (score >= 60) return '#fbbf24'; // Yellow
+    return '#f87171'; // Red
+  };
+
   return (
-    <div style={{ maxWidth: '800px', margin: '40px auto', fontFamily: 'sans-serif', padding: '0 20px' }}>
-      <h1>📄 AI Resume Analyzer</h1>
-      
-      <div style={{ background: '#f9f9f9', padding: '20px', borderRadius: '8px', border: '1px solid #ddd' }}>
-        <h3>1. Upload Resume (PDF)</h3>
-        <input type="file" accept=".pdf" onChange={handleFileChange} />
+    <div style={styles.container}>
+      <div style={styles.wrapper}>
+        
+        {/* Header */}
+        <header style={styles.header}>
+          <h1 style={styles.title}>AI Resume Analyzer</h1>
+          <p style={styles.subtitle}>Powered by Groq API & Llama 3.3</p>
+        </header>
 
-        <h3 style={{ marginTop: '20px' }}>2. Job Description (Optional)</h3>
-        <textarea
-          placeholder="Paste job description here to check keyword & skills match..."
-          value={jobDescription}
-          onChange={(e) => setJobDescription(e.target.value)}
-          rows={4}
-          style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
-        />
+        {/* Form Card */}
+        <div style={styles.card}>
+          <form onSubmit={handleAnalyze}>
+            
+            <div style={styles.formGroup}>
+              <label style={styles.label}>1. Upload Resume (PDF) *</label>
+              <div style={styles.fileInputWrapper}>
+                <input 
+                  type="file" 
+                  accept=".pdf" 
+                  onChange={handleFileChange} 
+                  style={styles.fileInput} 
+                />
+                <div style={{ pointerEvents: 'none' }}>
+                  <svg style={{ width: '32px', height: '32px', fill: '#94a3b8', marginBottom: '10px' }} viewBox="0 0 24 24">
+                    <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z" />
+                  </svg>
+                  <p style={{ margin: 0, color: '#e2e8f0', fontWeight: 'bold' }}>
+                    {file ? file.name : "Click to upload or drag & drop PDF"}
+                  </p>
+                </div>
+              </div>
+            </div>
 
-        <button 
-          onClick={handleAnalyze} 
-          disabled={loading}
-          style={{ 
-            marginTop: '15px', 
-            padding: '10px 20px', 
-            cursor: loading ? 'not-allowed' : 'pointer', 
-            background: '#0070f3', 
-            color: '#fff', 
-            border: 'none', 
-            borderRadius: '4px',
-            fontWeight: 'bold'
-          }}
-        >
-          {loading ? 'Analyzing with Groq (Llama 3.3)...' : 'Analyze Resume'}
-        </button>
-      </div>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>2. Job Description (Optional)</label>
+              <textarea
+                style={styles.textarea}
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+                placeholder="Paste the target job description here..."
+              />
+            </div>
 
-      {error && <p style={{ color: 'red', fontWeight: 'bold', marginTop: '15px' }}>{error}</p>}
+            {error && <div style={styles.error}>{error}</div>}
 
-      {/* Extracted PDF Text */}
-      {extractedText && (
-        <div style={{ marginTop: '20px' }}>
-          <h3>Extracted Content:</h3>
-          <textarea 
-            readOnly 
-            value={extractedText} 
-            rows={8} 
-            style={{ width: '100%', fontFamily: 'monospace', padding: '10px', boxSizing: 'border-box' }} 
-          />
+            <button 
+              type="submit" 
+              disabled={loading} 
+              style={{...styles.button, ...(loading ? styles.buttonDisabled : {})}}
+            >
+              {loading ? 'Analyzing with Groq...' : 'Analyze Resume'}
+            </button>
+          </form>
         </div>
-      )}
 
-      {/* Gemini AI Breakdown Card */}
-      {analysis && (
-        <div style={{ marginTop: '30px', padding: '20px', border: '2px solid #4caf50', borderRadius: '8px', background: '#f6fff6' }}>
-          <h2>Score: {analysis.match_score}%</h2>
-          <p><strong>Summary:</strong> {analysis.summary}</p>
+        {/* Results Section */}
+        {analysis && (
+          <div>
+            
+            <div style={styles.grid}>
+              {/* Match Score */}
+              <div style={styles.scoreCard}>
+                <div style={{ color: '#94a3b8', fontSize: '0.9rem', textTransform: 'uppercase' }}>ATS Match Score</div>
+                <div style={{ ...styles.scoreValue, color: getScoreColor(analysis.match_score) }}>
+                  {analysis.match_score}%
+                </div>
+              </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '20px' }}>
-            <div>
-              <h4 style={{ color: 'green', margin: '0 0 10px 0' }}>✅ Strengths</h4>
-              <ul>
-                {analysis.strengths?.map((s, i) => <li key={i}>{s}</li>)}
-              </ul>
+              {/* Summary */}
+              <div style={{ ...styles.card, marginBottom: 0, flex: 2 }}>
+                <h3 style={{ marginTop: 0, color: '#818cf8' }}>Executive Summary</h3>
+                <p style={{ lineHeight: '1.6', color: '#cbd5e1' }}>{analysis.summary}</p>
+              </div>
             </div>
 
-            <div>
-              <h4 style={{ color: '#d32f2f', margin: '0 0 10px 0' }}>⚠️ Missing Keywords</h4>
-              <ul>
-                {analysis.missing_keywords?.map((k, i) => <li key={i}>{k}</li>)}
-              </ul>
+            <div style={styles.grid}>
+              {/* Strengths */}
+              <div style={styles.card}>
+                <h3 style={{ marginTop: 0, color: '#34d399' }}>Identified Strengths</h3>
+                <ul style={styles.list}>
+                  {analysis.strengths?.map((item, i) => (
+                    <li key={i} style={styles.listItem}>
+                      <span style={{ color: '#34d399' }}>✓</span> {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Suggestions */}
+              <div style={styles.card}>
+                <h3 style={{ marginTop: 0, color: '#818cf8' }}>Actionable Suggestions</h3>
+                <ul style={styles.list}>
+                  {analysis.suggestions?.map((item, i) => (
+                    <li key={i} style={styles.listItem}>
+                      <span style={{ color: '#818cf8' }}>→</span> {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
+
+            {/* Missing Keywords */}
+            <div style={styles.card}>
+              <h3 style={{ marginTop: 0, color: '#fbbf24' }}>Missing Keywords</h3>
+              <div>
+                {analysis.missing_keywords?.map((kw, i) => (
+                  <span key={i} style={styles.badge}>{kw}</span>
+                ))}
+              </div>
+            </div>
+
+            {/* Raw Text Extract */}
+            {extractedText && (
+              <details style={{ ...styles.card, padding: '20px' }}>
+                <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#94a3b8' }}>
+                  View Raw Extracted Text
+                </summary>
+                <pre style={{ marginTop: '20px', whiteSpace: 'pre-wrap', fontSize: '0.85rem', color: '#64748b' }}>
+                  {extractedText}
+                </pre>
+              </details>
+            )}
+
           </div>
-
-          <h4 style={{ color: '#0070f3', marginTop: '20px' }}>💡 Actionable Suggestions</h4>
-          <ul>
-            {analysis.suggestions?.map((s, i) => <li key={i}>{s}</li>)}
-          </ul>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
-
-export default App;
