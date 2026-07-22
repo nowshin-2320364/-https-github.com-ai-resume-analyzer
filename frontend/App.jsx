@@ -83,7 +83,7 @@ function App() {
             fontWeight: 'bold'
           }}
         >
-          {loading ? 'Analyzing with Gemini 3.5 Flash...' : 'Analyze Resume'}
+          {loading ? 'Analyzing with Groq (Llama 3.3)...' : 'Analyze Resume'}
         </button>
       </div>
 
