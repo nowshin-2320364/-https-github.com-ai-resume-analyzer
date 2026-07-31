@@ -5,3 +5,5 @@ python-dotenv
 pdfplumber
 python-multipart
 pydantic
+PyPDF2
+sqlalchemy
