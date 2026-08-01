@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import List, Optional
 import PyPDF2
 from groq import Groq
+from dotenv import load_dotenv
 
 from fastapi import FastAPI, File, UploadFile, Form, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +14,11 @@ from sqlalchemy.orm import Session
 # Import your database setup (assuming standard SQLAlchemy structure)
 from database import engine, get_db
 import models
+
+# ---------------------------------------------------------
+# LOAD ENVIRONMENT VARIABLES
+# ---------------------------------------------------------
+load_dotenv() 
 
 # Create the database tables if they don't exist yet
 models.Base.metadata.create_all(bind=engine)
@@ -33,8 +39,11 @@ app.add_middleware(
 # ---------------------------------------------------------
 # AI & UTILS SETUP
 # ---------------------------------------------------------
-# Make sure to set GROQ_API_KEY in your Codespace terminal/environment variables
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "your-fallback-api-key-here")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+if not GROQ_API_KEY:
+    print("⚠️ WARNING: GROQ_API_KEY was not found in the .env file!")
+
 client = Groq(api_key=GROQ_API_KEY)
 
 def extract_text_from_pdf(file_file) -> str:
@@ -105,7 +114,7 @@ async def analyze_resume(
                     "content": prompt
                 }
             ],
-            model="llama3-8b-8192", # Or whichever Groq model you prefer
+            model="llama-3.1-8b-instant", # Updated supported model
             temperature=0.3,
             response_format={"type": "json_object"}
         )
@@ -131,8 +140,8 @@ async def save_analysis(
 ):
     """Saves a successfully analyzed resume to the SQLite database."""
     try:
-        # Assuming your models.py has a class named HistoryRecord
-        new_record = models.HistoryRecord(
+        # Updated to use SavedAnalysis instead of HistoryRecord
+        new_record = models.SavedAnalysis(
             filename=filename,
             job_title=job_title,
             match_score=match_score,
@@ -145,20 +154,24 @@ async def save_analysis(
         return {"status": "success", "id": new_record.id}
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail="Failed to save to database")
+        # Prints exact database error to the backend terminal
+        print(f"🚨 DATABASE ERROR: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
 @app.get("/api/history")
 async def get_history(db: Session = Depends(get_db)):
     """Fetches all saved reports from the database, newest first."""
-    records = db.query(models.HistoryRecord).order_by(models.HistoryRecord.created_at.desc()).all()
+    # Updated to use SavedAnalysis
+    records = db.query(models.SavedAnalysis).order_by(models.SavedAnalysis.created_at.desc()).all()
     return records
 
 
 @app.put("/api/history/{record_id}")
 async def update_history_title(record_id: int, data: HistoryUpdate, db: Session = Depends(get_db)):
     """Updates the job title of a specific saved report."""
-    record = db.query(models.HistoryRecord).filter(models.HistoryRecord.id == record_id).first()
+    # Updated to use SavedAnalysis
+    record = db.query(models.SavedAnalysis).filter(models.SavedAnalysis.id == record_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="Record not found")
     
@@ -171,11 +184,11 @@ async def update_history_title(record_id: int, data: HistoryUpdate, db: Session 
 @app.delete("/api/history/{record_id}")
 async def delete_history(record_id: int, db: Session = Depends(get_db)):
     """Deletes a saved report from the database."""
-    record = db.query(models.HistoryRecord).filter(models.HistoryRecord.id == record_id).first()
+    # Updated to use SavedAnalysis
+    record = db.query(models.SavedAnalysis).filter(models.SavedAnalysis.id == record_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="Record not found")
     
     db.delete(record)
     db.commit()
     return {"status": "deleted"}
-    
