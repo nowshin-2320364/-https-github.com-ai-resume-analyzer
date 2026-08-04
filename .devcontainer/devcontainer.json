@@ -1,4 +1,16 @@
 {
+<<<<<<< HEAD
+  "name": "AI Resume Analyzer Codespace",
+  "forwardPorts": [5173, 8000],
+  "portsAttributes": {
+    "5173": {
+      "label": "React Frontend",
+      "visibility": "public"
+    },
+    "8000": {
+      "label": "FastAPI Backend",
+      "visibility": "public"
+=======
   "forwardPorts": [8000, 5173],
   "portsAttributes": {
     "8000": {
@@ -8,6 +20,7 @@
     "5173": {
       "label": "React Frontend",
       "visibility": "public"
+>>>>>>> 2f12430adbf307fb0caa613055e19dd8cf21abe5
     }
   }
 }

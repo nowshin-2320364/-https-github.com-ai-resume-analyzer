@@ -1,32 +1,30 @@
 import React, { useState, useEffect } from 'react';
+import Login from './Login';
+
+const API_BASE_URL = 'https://reimagined-pancake-69x7w67q9pr6c595p-8000.app.github.dev';
 
 export default function App() {
+  const [token, setToken] = useState(localStorage.getItem('token'));
   const [file, setFile] = useState(null);
   const [jobDescription, setJobDescription] = useState('');
-  const [analysis, setAnalysis] = useState(null);
-  const [extractedText, setExtractedText] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [isDragging, setIsDragging] = useState(false);
-
+  const [error, setError] = useState('');
+  const [result, setResult] = useState(null);
   const [history, setHistory] = useState([]);
-  const [editingId, setEditingId] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [editId, setEditId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
-  const [saveStatus, setSaveStatus] = useState('');
 
-  const getBackendBaseUrl = () => {
-    let url = 'http://localhost:8000';
-    if (typeof window !== 'undefined' && window.location.href.includes('.app.github.dev')) {
-      url = window.location.href.replace('-5173.', '-8000.').replace(/\/$/, '');
+  // Fetch saved history from SQLite database when user is logged in
+  useEffect(() => {
+    if (token) {
+      fetchHistory();
     }
-    return url;
-  };
-
-  const baseUrl = getBackendBaseUrl();
+  }, [token]);
 
   const fetchHistory = async () => {
     try {
-      const res = await fetch(`${baseUrl}/api/history`);
+      const res = await fetch(`${API_BASE_URL}/api/history`);
       if (res.ok) {
         const data = await res.json();
         setHistory(data);
@@ -36,22 +34,31 @@ export default function App() {
     }
   };
 
-  useEffect(() => {
-    fetchHistory();
-  }, []);
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    setToken(null);
+  };
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
 
   const handleAnalyze = async (e) => {
     e.preventDefault();
     if (!file) {
-      setError('Please select or drop a PDF resume file.');
+      setError('Please select a PDF resume to upload.');
+      return;
+    }
+    if (!jobDescription.trim()) {
+      setError('Please paste a job description.');
       return;
     }
 
+    setError('');
     setLoading(true);
-    setError(null);
-    setAnalysis(null);
-    setExtractedText('');
-    setSaveStatus('');
+    setResult(null);
 
     // Fallback prompt if the user leaves the box empty
     const finalJobDesc = jobDescription.trim() 
@@ -63,12 +70,17 @@ export default function App() {
     formData.append('job_description', finalJobDesc); // Send the fallback if empty
 
     try {
-      const res = await fetch(`${baseUrl}/api/upload-resume`, {
+      const res = await fetch(`${API_BASE_URL}/api/upload-resume`, {
         method: 'POST',
         body: formData,
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
+<<<<<<< HEAD
+        throw new Error(data.detail || 'Failed to analyze resume.');
+=======
         const errData = await res.json();
         // Fallback error parsing just in case FastAPI returns a validation array
         if (errData.detail && Array.isArray(errData.detail)) {
@@ -76,60 +88,88 @@ export default function App() {
             throw new Error(messages.join(', '));
         }
         throw new Error(errData.detail || 'Failed to analyze resume');
+>>>>>>> 2f12430adbf307fb0caa613055e19dd8cf21abe5
       }
 
-      const data = await res.json();
-      setExtractedText(data.extracted_text || '');
-      setAnalysis(data.analysis || null);
+      setResult(data.analysis);
     } catch (err) {
-      setError(err.message || 'An unexpected error occurred.');
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSaveAnalysis = async () => {
-    if (!analysis) return;
+  const handleSaveHistory = async () => {
+    if (!result) return;
+    setSaving(true);
     try {
       const formData = new FormData();
-      formData.append('filename', file?.name || 'Resume.pdf');
-      formData.append('job_title', jobDescription.slice(0, 30) || 'General Analysis');
-      formData.append('match_score', analysis.match_score || 0);
-      formData.append('summary', analysis.summary || '');
+      formData.append('filename', file ? file.name : 'resume.pdf');
+      formData.append('job_title', 'Target Role');
+      formData.append('match_score', result.match_score);
+      formData.append('summary', result.summary);
 
-      const res = await fetch(`${baseUrl}/api/save-analysis`, {
+      const res = await fetch(`${API_BASE_URL}/api/save-analysis`, {
         method: 'POST',
         body: formData,
       });
 
       if (res.ok) {
+<<<<<<< HEAD
+        fetchHistory();
+        alert('Analysis saved to history!');
+      } else {
+        alert('Failed to save analysis.');
+=======
         setSaveStatus('Saved!');
         fetchHistory();
         setTimeout(() => setSaveStatus(''), 3000);
+>>>>>>> 2f12430adbf307fb0caa613055e19dd8cf21abe5
       }
     } catch (err) {
-      console.error('Save failed:', err);
+      alert('Error saving analysis: ' + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteHistory = async (id) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/history/${id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setHistory(history.filter((item) => item.id !== id));
+      }
+    } catch (err) {
+      console.error('Failed to delete record:', err);
     }
   };
 
   const handleUpdateTitle = async (id) => {
     try {
-      const res = await fetch(`${baseUrl}/api/history/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/history/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ job_title: editTitle }),
       });
-
       if (res.ok) {
-        setEditingId(null);
-        setEditTitle('');
+        setEditId(null);
         fetchHistory();
       }
     } catch (err) {
-      console.error('Update failed:', err);
+      console.error('Failed to update title:', err);
     }
   };
 
+<<<<<<< HEAD
+  // ---------------------------------------------------------
+  // UNAUTHENTICATED VIEW (SHOW LOGIN SCREEN)
+  // ---------------------------------------------------------
+  if (!token) {
+    return <Login onLoginSuccess={() => setToken(localStorage.getItem('token'))} />;
+  }
+=======
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this scan record?')) return;
     try {
@@ -156,8 +196,45 @@ export default function App() {
     if (score >= 50) return 'linear-gradient(135deg, #f59e0b, #fbbf24)';
     return 'linear-gradient(135deg, #ef4444, #f87171)';
   };
+>>>>>>> 2f12430adbf307fb0caa613055e19dd8cf21abe5
 
+  // ---------------------------------------------------------
+  // AUTHENTICATED MAIN APPLICATION DASHBOARD
+  // ---------------------------------------------------------
   return (
+<<<<<<< HEAD
+    <div style={styles.container}>
+      {/* Header Bar */}
+      <header style={styles.header}>
+        <h1 style={styles.logo}>✨ AI Resume Analyzer</h1>
+        <button onClick={handleLogout} style={styles.logoutBtn}>
+          Logout
+        </button>
+      </header>
+
+      {/* App Body Container */}
+      <div style={styles.mainContent}>
+        {/* Upload & Form Card */}
+        <div style={styles.card}>
+          <form onSubmit={handleAnalyze}>
+            <div style={styles.uploadZone}>
+              <input
+                type="file"
+                accept=".pdf"
+                onChange={handleFileChange}
+                id="pdf-upload"
+                style={{ display: 'none' }}
+              />
+              <label htmlFor="pdf-upload" style={styles.uploadLabel}>
+                📄 {file ? `Selected: ${file.name}` : 'Click to select PDF Resume'}
+              </label>
+            </div>
+
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>Job Description / Role Requirements</label>
+              <textarea
+                rows={5}
+=======
     <div style={styles.page}>
       <style>{`
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
@@ -237,6 +314,7 @@ export default function App() {
               <label style={styles.label}>Job Description / Role Requirements</label>
               <textarea
                 rows="5"
+>>>>>>> 2f12430adbf307fb0caa613055e19dd8cf21abe5
                 placeholder="Paste the job description or keyword requirements here..."
                 value={jobDescription}
                 onChange={(e) => setJobDescription(e.target.value)}
@@ -244,6 +322,84 @@ export default function App() {
               />
             </div>
 
+<<<<<<< HEAD
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                ...styles.primaryBtn,
+                opacity: loading ? 0.7 : 1,
+              }}
+            >
+              {loading ? 'Analyzing with AI...' : '🚀 Analyze Resume'}
+            </button>
+          </form>
+
+          {error && <div style={styles.errorAlert}>⚠️ {error}</div>}
+        </div>
+
+        {/* AI Results Output Card */}
+        {result && (
+          <div style={styles.card}>
+            <div style={styles.resultHeader}>
+              <h2 style={{ margin: 0 }}>Analysis Results</h2>
+              <div style={styles.scoreBadge}>{result.match_score}% Match</div>
+            </div>
+
+            <p style={styles.summaryText}>
+              <strong>Summary:</strong> {result.summary}
+            </p>
+
+            <div style={styles.resultGrid}>
+              <div style={styles.resultSection}>
+                <h4 style={{ color: '#4ade80', marginTop: 0 }}>✅ Key Strengths</h4>
+                <ul style={styles.list}>
+                  {result.strengths?.map((item, idx) => (
+                    <li key={idx}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div style={styles.resultSection}>
+                <h4 style={{ color: '#f87171', marginTop: 0 }}>⚠️ Missing Keywords</h4>
+                <ul style={styles.list}>
+                  {result.missing_keywords?.map((item, idx) => (
+                    <li key={idx}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <div style={styles.resultSection}>
+              <h4 style={{ color: '#60a5fa', marginTop: 0 }}>💡 Actionable Suggestions</h4>
+              <ul style={styles.list}>
+                {result.suggestions?.map((item, idx) => (
+                  <li key={idx}>{item}</li>
+                ))}
+              </ul>
+            </div>
+
+            <button onClick={handleSaveHistory} disabled={saving} style={styles.saveBtn}>
+              {saving ? 'Saving...' : '💾 Save to History'}
+            </button>
+          </div>
+        )}
+
+        {/* Saved History Card */}
+        <div style={styles.card}>
+          <h3 style={styles.sectionTitle}>📜 Saved Analysis History</h3>
+          {history.length === 0 ? (
+            <div style={styles.emptyState}>
+              📁 No saved reports found in SQLite database.
+            </div>
+          ) : (
+            <div style={styles.historyList}>
+              {history.map((record) => (
+                <div key={record.id} style={styles.historyCard}>
+                  <div style={styles.historyHeader}>
+                    {editId === record.id ? (
+                      <div style={{ display: 'flex', gap: '8px' }}>
+=======
             <button type="submit" disabled={loading} className="primary-btn" style={styles.button}>
               {loading ? (
                 <span style={styles.btnLoadingWrap}>
@@ -340,10 +496,48 @@ export default function App() {
                   <div style={{ flex: 1 }}>
                     {editingId === item.id ? (
                       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+>>>>>>> 2f12430adbf307fb0caa613055e19dd8cf21abe5
                         <input
                           type="text"
                           value={editTitle}
                           onChange={(e) => setEditTitle(e.target.value)}
+<<<<<<< HEAD
+                          style={styles.inlineInput}
+                        />
+                        <button
+                          onClick={() => handleUpdateTitle(record.id)}
+                          style={styles.smallBtn}
+                        >
+                          Save
+                        </button>
+                      </div>
+                    ) : (
+                      <h4 style={{ margin: 0 }}>
+                        {record.job_title} ({record.match_score}% Match)
+                      </h4>
+                    )}
+                    <span style={styles.dateBadge}>
+                      {new Date(record.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p style={styles.historyFile}>File: {record.filename}</p>
+                  <p style={styles.historySummary}>{record.summary}</p>
+
+                  <div style={styles.historyActions}>
+                    <button
+                      onClick={() => {
+                        setEditId(record.id);
+                        setEditTitle(record.job_title);
+                      }}
+                      style={styles.actionBtn}
+                    >
+                      ✏️ Edit Title
+                    </button>
+                    <button
+                      onClick={() => handleDeleteHistory(record.id)}
+                      style={{ ...styles.actionBtn, color: '#ef4444' }}
+                    >
+=======
                           style={styles.editInput}
                         />
                         <button onClick={() => handleUpdateTitle(item.id)} className="icon-btn" style={styles.smallSaveBtn}>Save</button>
@@ -369,6 +563,7 @@ export default function App() {
                       ✏️ Edit
                     </button>
                     <button onClick={() => handleDelete(item.id)} className="icon-btn" style={styles.deleteBtn}>
+>>>>>>> 2f12430adbf307fb0caa613055e19dd8cf21abe5
                       🗑️ Delete
                     </button>
                   </div>
@@ -382,7 +577,223 @@ export default function App() {
   );
 }
 
+// ---------------------------------------------------------
+// STYLES (DARK THEME)
+// ---------------------------------------------------------
 const styles = {
+<<<<<<< HEAD
+  container: {
+    backgroundColor: '#0b0f19',
+    color: '#f3f4f6',
+    minHeight: '100vh',
+    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+    paddingBottom: '40px',
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '16px 32px',
+    backgroundColor: '#111827',
+    borderBottom: '1px solid #1f2937',
+  },
+  logo: {
+    fontSize: '1.25rem',
+    fontWeight: '700',
+    margin: 0,
+    color: '#818cf8',
+  },
+  logoutBtn: {
+    backgroundColor: '#374151',
+    color: '#fff',
+    border: 'none',
+    padding: '8px 16px',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500',
+  },
+  mainContent: {
+    maxWidth: '800px',
+    margin: '32px auto',
+    padding: '0 16px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '24px',
+  },
+  card: {
+    backgroundColor: '#111827',
+    border: '1px solid #1f2937',
+    borderRadius: '12px',
+    padding: '24px',
+  },
+  uploadZone: {
+    border: '2px dashed #374151',
+    borderRadius: '8px',
+    padding: '24px',
+    textAlign: 'center',
+    marginBottom: '20px',
+    backgroundColor: '#1f2937',
+  },
+  uploadLabel: {
+    cursor: 'pointer',
+    color: '#38bdf8',
+    fontWeight: '600',
+  },
+  fieldGroup: {
+    marginBottom: '20px',
+  },
+  label: {
+    display: 'block',
+    marginBottom: '8px',
+    fontSize: '0.875rem',
+    fontWeight: '600',
+    color: '#9ca3af',
+  },
+  textarea: {
+    width: '100%',
+    backgroundColor: '#1f2937',
+    border: '1px solid #374151',
+    borderRadius: '6px',
+    padding: '12px',
+    color: '#fff',
+    fontSize: '0.9rem',
+    boxSizing: 'border-box',
+    resize: 'vertical',
+  },
+  primaryBtn: {
+    width: '100%',
+    backgroundColor: '#6366f1',
+    color: '#fff',
+    border: 'none',
+    padding: '12px',
+    borderRadius: '8px',
+    fontWeight: '600',
+    fontSize: '1rem',
+    cursor: 'pointer',
+  },
+  errorAlert: {
+    marginTop: '16px',
+    padding: '12px',
+    backgroundColor: '#450a0a',
+    border: '1px solid #7f1d1d',
+    borderRadius: '6px',
+    color: '#fca5a5',
+    fontSize: '0.9rem',
+  },
+  resultHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '16px',
+  },
+  scoreBadge: {
+    backgroundColor: '#4f46e5',
+    color: '#fff',
+    padding: '6px 16px',
+    borderRadius: '20px',
+    fontWeight: '700',
+    fontSize: '1.1rem',
+  },
+  summaryText: {
+    color: '#d1d5db',
+    lineHeight: '1.5',
+  },
+  resultGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '16px',
+    margin: '16px 0',
+  },
+  resultSection: {
+    backgroundColor: '#1f2937',
+    padding: '16px',
+    borderRadius: '8px',
+    margin: '8px 0',
+  },
+  list: {
+    paddingLeft: '20px',
+    margin: 0,
+    color: '#d1d5db',
+    lineHeight: '1.6',
+  },
+  saveBtn: {
+    marginTop: '16px',
+    width: '100%',
+    backgroundColor: '#059669',
+    color: '#fff',
+    border: 'none',
+    padding: '10px',
+    borderRadius: '6px',
+    fontWeight: '600',
+    cursor: 'pointer',
+  },
+  sectionTitle: {
+    marginTop: 0,
+    marginBottom: '16px',
+    color: '#f3f4f6',
+  },
+  emptyState: {
+    textAlign: 'center',
+    color: '#6b7280',
+    padding: '32px 0',
+  },
+  historyList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+  },
+  historyCard: {
+    backgroundColor: '#1f2937',
+    borderRadius: '8px',
+    padding: '16px',
+  },
+  historyHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dateBadge: {
+    fontSize: '0.75rem',
+    color: '#9ca3af',
+  },
+  historyFile: {
+    fontSize: '0.85rem',
+    color: '#38bdf8',
+    margin: '4px 0',
+  },
+  historySummary: {
+    fontSize: '0.9rem',
+    color: '#d1d5db',
+  },
+  historyActions: {
+    display: 'flex',
+    gap: '12px',
+    marginTop: '8px',
+  },
+  actionBtn: {
+    background: 'none',
+    border: 'none',
+    color: '#9ca3af',
+    cursor: 'pointer',
+    fontSize: '0.85rem',
+    padding: 0,
+  },
+  inlineInput: {
+    backgroundColor: '#111827',
+    border: '1px solid #374151',
+    color: '#fff',
+    padding: '4px 8px',
+    borderRadius: '4px',
+  },
+  smallBtn: {
+    backgroundColor: '#4f46e5',
+    color: '#fff',
+    border: 'none',
+    padding: '4px 8px',
+    borderRadius: '4px',
+    cursor: 'pointer',
+  },
+=======
   page: {
     position: 'relative',
     minHeight: '100vh',
@@ -500,4 +911,5 @@ const styles = {
   editInput: { backgroundColor: 'rgba(15,23,42,0.7)', border: '1px solid rgba(148,163,184,0.3)', color: '#fff', padding: '0.4rem 0.6rem', borderRadius: '6px' },
   smallSaveBtn: { backgroundColor: '#059669', color: '#fff', border: 'none', padding: '0.35rem 0.7rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 },
   smallCancelBtn: { backgroundColor: '#475569', color: '#fff', border: 'none', padding: '0.35rem 0.7rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 },
+>>>>>>> 2f12430adbf307fb0caa613055e19dd8cf21abe5
 };
