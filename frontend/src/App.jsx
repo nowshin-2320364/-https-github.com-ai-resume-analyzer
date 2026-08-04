@@ -58,10 +58,6 @@ export default function App() {
       setError('Please select a PDF resume to upload.');
       return;
     }
-    if (!jobDescription.trim()) {
-      setError('Please paste a job description.');
-      return;
-    }
 
     setError('');
     setLoading(true);
@@ -95,7 +91,7 @@ export default function App() {
     try {
       const formData = new FormData();
       formData.append('filename', file ? file.name : 'resume.pdf');
-      formData.append('job_title', 'Target Role');
+      formData.append('job_title', jobDescription.trim() ? 'Target Role' : 'General Analysis');
       formData.append('match_score', result.match_score);
       formData.append('summary', result.summary);
 
@@ -219,10 +215,12 @@ export default function App() {
             </div>
 
             <div style={styles.inputGroup}>
-              <label style={styles.label}>Job Description / Role Requirements</label>
+              <label style={styles.label}>
+                Job Description / Role Requirements <span style={{ color: '#94a3b8', fontWeight: 'normal' }}>(Optional)</span>
+              </label>
               <textarea
                 rows="5"
-                placeholder="Paste the job description or keyword requirements here..."
+                placeholder="Paste the job description or keyword requirements here (optional - leave blank for general review)..."
                 value={jobDescription}
                 onChange={(e) => setJobDescription(e.target.value)}
                 style={styles.textarea}
