@@ -1,16 +1,8 @@
+# Fix: Backend Dependencies & Stability
 fastapi
 uvicorn
-groq
-python-dotenv
-pdfplumber
-python-multipart
-pydantic
-<<<<<<< HEAD
 sqlalchemy
 passlib
-bcrypt
-PyJWT
-=======
-PyPDF2
-sqlalchemy
->>>>>>> 2f12430adbf307fb0caa613055e19dd8cf21abe5
+bcrypt<4.0.0
+pypdf
+python-multipart
