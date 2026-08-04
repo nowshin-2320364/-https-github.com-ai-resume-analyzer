@@ -3,13 +3,12 @@
   "portsAttributes": {
     "8000": {
       "label": "FastAPI Backend",
-      "onAutoForward": "openBrowserOnce",
-      "visibility": "public"
+      "onAutoForward": "openBrowserOnce"
     },
     "5173": {
       "label": "Vite React Frontend",
-      "onAutoForward": "openBrowserOnce",
-      "visibility": "public"
+      "onAutoForward": "openBrowserOnce"
     }
-  }
+  },
+  "postAttachCommand": "gh codespace ports visibility 8000:public 5173:public -c $CODESPACE_NAME"
 }
