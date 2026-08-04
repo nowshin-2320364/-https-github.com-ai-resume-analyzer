@@ -1,4 +1,4 @@
-# Backend Authentication Endpoints & CORS Middleware
+# Feature: Backend Authentication API & CORS Setup
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -125,6 +125,7 @@ async def analyze_resume(file: UploadFile = File(...), job_description: str = Fo
     for page in pdf_reader.pages:
         extracted_text += page.extract_text() or ""
     
+    # Mock scoring logic for demonstration
     score = min(100, max(40, len(extracted_text) // 20))
     
     return {
