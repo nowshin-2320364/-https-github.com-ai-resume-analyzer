@@ -2,10 +2,17 @@ import React, { useState, useEffect } from 'react';
 import Login from './Login';
 
 const getApiBaseUrl = () => {
+  // 1. If Vercel provides a live URL via environment variables, use it!
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  
+  // 2. If running inside GitHub Codespaces, use this dynamic URL
   if (typeof window !== 'undefined' && window.location.hostname.includes('app.github.dev')) {
-    // Automatically transforms the frontend Codespace URL (-5173) to backend (-8000)
     return `https://${window.location.hostname.replace('-5173', '-8000')}`;
   }
+  
+  // 3. Fallback to standard localhost for regular local testing
   return 'http://localhost:8000';
 };
 
